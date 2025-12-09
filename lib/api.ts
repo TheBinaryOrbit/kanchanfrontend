@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // const baseURL = 'https://2q766kvz-3000.inc1.devtunnels.ms'
-const baseURL = 'http://localhost:3000'
+const baseURL = 'https://apikanchan.xcentic.com'
 
 const api = axios.create({
   baseURL,
