@@ -35,6 +35,12 @@ export default function CustomersPage() {
   const [page, setPage] = useState<number>(initialPage)
   const [limit, setLimit] = useState<number>(initialLimit)
 
+  // Machine selection state
+  const [machines, setMachines] = useState<any[]>([])
+  const [loadingMachines, setLoadingMachines] = useState(false)
+  const [selectedMachineIds, setSelectedMachineIds] = useState<string[]>([])
+  const [machineSearchQuery, setMachineSearchQuery] = useState('')
+
   useEffect(() => {
     const spSearch = (searchParams?.get('search') as string) || ''
     const spPage = parseInt((searchParams?.get('page') as string) || '1', 10) || 1
@@ -59,6 +65,20 @@ export default function CustomersPage() {
     }
   }
 
+  async function loadMachines() {
+    setLoadingMachines(true)
+    try {
+      const res = await api.get('/api/machines')
+      const data = res.data
+      setMachines(data.machines || data || [])
+    } catch (err) {
+      console.error('Failed to load machines:', err)
+      setMachines([])
+    } finally {
+      setLoadingMachines(false)
+    }
+  }
+
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,17 +87,25 @@ export default function CustomersPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     try {
-      const payload = {
+      const payload: any = {
         name: form.name,
         phone: form.phone,
         email: form.email,
         address: `${form.street || ''} | ${form.city || ''} | ${form.state || ''} | ${form.pincode || ''}`,
       }
+      
+      // Add machine IDs if selected
+      if (selectedMachineIds.length > 0) {
+        payload.machineIds = selectedMachineIds
+      }
+      
       const res = await api.post('/api/customers', payload)
       if (res.status >= 200 && res.status < 300) {
         await load()
         setShowCreate(false)
         setForm({ name: '', phone: '', email: '', street: '', city: '', state: '', pincode: '' })
+        setSelectedMachineIds([])
+        setMachineSearchQuery('')
       } else {
         alert(res.data?.message || 'Error')
       }
@@ -158,7 +186,10 @@ export default function CustomersPage() {
           </form>
           
           <button 
-            onClick={() => setShowCreate(true)} 
+            onClick={() => {
+              setShowCreate(true)
+              loadMachines() // Load machines when opening create modal
+            }} 
             className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow-md font-medium"
           >
             <Plus className="w-5 h-5" />
@@ -347,6 +378,137 @@ export default function CustomersPage() {
                   />
                 </div>
               </div>
+
+              {/* Machine Selection Section */}
+              <div className="mt-8 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800">Associate Machines</h3>
+                    <p className="text-sm text-slate-600 mt-1">Select machines to link with this customer (Optional)</p>
+                  </div>
+                  {machines.length === 0 && !loadingMachines && (
+                    <button
+                      type="button"
+                      onClick={loadMachines}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      Load Machines
+                    </button>
+                  )}
+                </div>
+
+                {loadingMachines ? (
+                  <div className="flex items-center justify-center py-12 bg-slate-50 rounded-lg">
+                    <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="ml-3 text-slate-600">Loading machines...</span>
+                  </div>
+                ) : machines.length > 0 ? (
+                  <>
+                    {/* Machine Search */}
+                    <div className="mb-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                        <input
+                          type="text"
+                          placeholder="Search machines by name, category, brand, or serial number..."
+                          value={machineSearchQuery}
+                          onChange={e => setMachineSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        {machineSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setMachineSearchQuery('')}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Machine List */}
+                    <div className="space-y-2 max-h-80 overflow-y-auto border border-slate-200 rounded-lg p-4 bg-slate-50">
+                      {machines
+                        .filter(machine => {
+                          if (!machineSearchQuery) return true
+                          const query = machineSearchQuery.toLowerCase()
+                          return (
+                            machine.name?.toLowerCase().includes(query) ||
+                            machine.category?.toLowerCase().includes(query) ||
+                            machine.brand?.toLowerCase().includes(query) ||
+                            machine.serialNumber?.toLowerCase().includes(query)
+                          )
+                        })
+                        .map(machine => {
+                          const isSelected = selectedMachineIds.includes(machine.id)
+                          return (
+                            <div
+                              key={machine.id}
+                              onClick={() => {
+                                setSelectedMachineIds(prev =>
+                                  prev.includes(machine.id)
+                                    ? prev.filter(id => id !== machine.id)
+                                    : [...prev, machine.id]
+                                )
+                              }}
+                              className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-medium text-slate-900">{machine.name}</h4>
+                                  </div>
+                                  <div className="mt-1 text-sm text-slate-600 space-y-0.5">
+                                    <div>{machine.category} • {machine.brand}</div>
+                                    {machine.serialNumber && (
+                                      <div className="text-xs text-slate-500">SN: {machine.serialNumber}</div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  {isSelected ? (
+                                    <div className="h-6 w-6 bg-blue-600 rounded-full flex items-center justify-center">
+                                      <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    </div>
+                                  ) : (
+                                    <div className="h-6 w-6 border-2 border-slate-300 rounded-full"></div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                    </div>
+
+                    {selectedMachineIds.length > 0 && (
+                      <div className="mt-3 flex items-center gap-2 text-sm text-green-600">
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium">
+                          {selectedMachineIds.length} machine{selectedMachineIds.length !== 1 ? 's' : ''} selected
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
+                    <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-slate-900">No machines available</h3>
+                    <p className="mt-1 text-sm text-slate-500">Create machines first to associate them with customers</p>
+                  </div>
+                )}
+              </div>
+
               <div className="mt-6 flex items-center gap-3">
                 <button 
                   type="submit"

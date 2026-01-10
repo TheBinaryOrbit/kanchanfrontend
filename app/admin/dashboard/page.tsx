@@ -9,7 +9,8 @@ type DashboardData = {
   totalUsers?: number
   activeServices?: number
   totalCustomers?: number
-  openIssues?: number
+  openIssues?: number,
+  totalMachines?: number
 }
 
 export default function AdminDashboardPage() {
@@ -40,7 +41,8 @@ export default function AdminDashboardPage() {
       trending: 'up',
       icon: Users,
       color: 'blue',
-      bgGradient: 'from-blue-500 to-blue-600'
+      bgGradient: 'from-blue-500 to-blue-600',
+      routerLink: '/admin/users'
     },
     {
       title: 'Active Services',
@@ -49,7 +51,8 @@ export default function AdminDashboardPage() {
       trending: 'up',
       icon: Activity,
       color: 'green',
-      bgGradient: 'from-green-500 to-green-600'
+      bgGradient: 'from-green-500 to-green-600',
+      routerLink: '/admin/services'
     },
     {
       title: 'Total Customers',
@@ -58,7 +61,8 @@ export default function AdminDashboardPage() {
       trending: 'up',
       icon: UserCheck,
       color: 'purple',
-      bgGradient: 'from-purple-500 to-purple-600'
+      bgGradient: 'from-purple-500 to-purple-600',
+      routerLink: '/admin/customers'
     },
     {
       title: 'Open Issues',
@@ -67,7 +71,18 @@ export default function AdminDashboardPage() {
       trending: 'down',
       icon: AlertCircle,
       color: 'orange',
-      bgGradient: 'from-orange-500 to-orange-600'
+      bgGradient: 'from-orange-500 to-orange-600',
+      routerLink: '/admin/issues'
+    },
+    {
+      title: 'Total Machines',
+      value: data?.totalMachines ?? 0,
+      change: '-5%',
+      trending: 'down',
+      icon: AlertCircle,
+      color: 'pink',
+      bgGradient: 'from-pink-500 to-pink-600',
+      routerLink: '/admin/machines  '
     }
   ]
 
@@ -94,7 +109,7 @@ export default function AdminDashboardPage() {
         {data ? (
           <>
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
               {stats.map((stat, index) => {
                 const Icon = stat.icon
                 const TrendIcon = stat.trending === 'up' ? TrendingUp : TrendingDown
@@ -103,6 +118,7 @@ export default function AdminDashboardPage() {
                   <div 
                     key={index}
                     className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer border border-slate-100"
+                    onClick={() => router.push(stat.routerLink)}
                   >
                     <div className="p-6">
                       {/* Icon and Trend */}
@@ -110,14 +126,7 @@ export default function AdminDashboardPage() {
                         <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.bgGradient} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                           <Icon className="w-6 h-6 text-white" />
                         </div>
-                        <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
-                          stat.trending === 'up' 
-                            ? 'bg-green-50 text-green-700' 
-                            : 'bg-red-50 text-red-700'
-                        }`}>
-                          <TrendIcon className="w-3 h-3" />
-                          <span className="text-xs font-semibold">{stat.change}</span>
-                        </div>
+                        
                       </div>
 
                       {/* Value */}
