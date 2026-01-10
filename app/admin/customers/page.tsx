@@ -83,6 +83,20 @@ export default function CustomersPage() {
     }
   }
 
+  async function handleDelete(customer: Customer) {
+    const ok = window.confirm(`Delete customer "${customer.name}"?\nThis will remove all related records.`)
+    if (!ok) return
+
+    try {
+      await api.delete(`/api/customers/${customer.id}`)
+      setSelectedCustomer(null)
+      await load()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to delete customer')
+    }
+  }
+
   const parseAddress = (address?: string) => {
     if (!address) return { street: '', city: '', state: '', pincode: '' }
     const parts = address.split('|').map(p => p.trim())
@@ -182,12 +196,19 @@ export default function CustomersPage() {
                         <td className="px-6 py-4 text-slate-600 max-w-xs truncate">
                           {c.address ? parseAddress(c.address).city || c.address : '—'}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-right space-x-3">
                           <button 
                             onClick={() => setSelectedCustomer(c)}
-                            className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                            className="text-blue-600 hover:text-blue-700 font-medium"
                           >
-                            View Details
+                            View
+                          </button>
+
+                          <button 
+                            onClick={() => handleDelete(c)}
+                            className="text-red-600 hover:text-red-700 font-medium"
+                          >
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -404,10 +425,17 @@ export default function CustomersPage() {
               </div>
             </div>
 
-            <div className="px-6 pb-6">
+            <div className="px-6 pb-6 flex gap-3">
+              <button 
+                onClick={() => handleDelete(selectedCustomer!)}
+                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Delete Customer
+              </button>
+
               <button 
                 onClick={() => setSelectedCustomer(null)}
-                className="w-full px-6 py-3 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+                className="flex-1 px-6 py-3 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
               >
                 Close
               </button>

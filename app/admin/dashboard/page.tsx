@@ -156,11 +156,11 @@ export default function AdminDashboardPage() {
                     <ArrowUpRight className="w-5 h-5 text-green-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
                   </button>
                   <button className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all group" onClick={()=> router.push('/admin/users')}>
-                    <span className="font-medium text-slate-800">Manage Users</span>
+                    <span className="font-medium text-slate-800">Manage Employees</span>
                     <ArrowUpRight className="w-5 h-5 text-purple-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
                   </button>
                   <button className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-50 hover:from-blue-100 hover:to-blue-100 rounded-xl transition-all group" onClick={()=> router.push('/admin/machines')}>
-                    <span className="font-medium text-slate-800">Manage Users</span>
+                    <span className="font-medium text-slate-800">Manage Machines</span>
                     <ArrowUpRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
                   </button>
                 </div>

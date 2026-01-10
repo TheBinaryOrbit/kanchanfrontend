@@ -34,9 +34,9 @@ export default function Sidebar() {
     },
     {
       href: '/admin/users',
-      label: 'Users',
+      label: 'Employees',
       icon: UserCog,
-      description: 'User management'
+      description: 'Employee Management'
     }
   ]
 
