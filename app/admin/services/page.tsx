@@ -54,17 +54,31 @@ export default function ServicesPage() {
     setMachineSearch('')
 
     try {
-      const [custRes, machRes] = await Promise.all([
+      const [custRes] = await Promise.all([
         api.get('/api/customers'),
-        api.get('/api/machines')
       ])
       setCustomers(custRes.data.customers || custRes.data || [])
-      setMachines(machRes.data.machines || machRes.data || [])
     } catch (err) {
       console.error('Failed to load customers/machines:', err)
       alert('Failed to load data for form')
     }
   }
+
+  useEffect(()=>{
+    // featch machines whenever customers change
+    async function fetchMachines() {
+      try {
+        const machineRes = await api.get(`/api/machines?customerId=${createForm.customerId}`)
+        setMachines(machineRes.data.machines || machineRes.data || [])
+      } catch (err) {
+        console.error('Failed to load machines:', err)
+        alert('Failed to load machines for form')
+      }
+    }
+    if(createForm.customerId){
+      fetchMachines()
+    }
+  },[createForm.customerId])
 
   async function handleCreateService(e: React.FormEvent) {
     e.preventDefault()

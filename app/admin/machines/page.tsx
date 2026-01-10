@@ -20,6 +20,10 @@ export default function MachinesPage() {
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedMachine, setSelectedMachine] = useState<any | null>(null)
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [machineToDelete, setMachineToDelete] = useState<any | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -91,6 +95,30 @@ export default function MachinesPage() {
     setShowDetailModal(true)
   }
 
+  function openDeleteModal(m: any) {
+    setMachineToDelete(m)
+    setShowDeleteModal(true)
+  }
+
+  async function handleDelete() {
+    if (!machineToDelete) return
+    setDeleteLoading(true)
+    try {
+      await api.delete(`/api/machines/${machineToDelete.id}`)
+      alert('Machine deleted successfully')
+      setShowDeleteModal(false)
+      setMachineToDelete(null)
+      // reload
+      const resp = await api.get('/api/machines', { params: { search: search || undefined } })
+      setMachines(resp.data.machines || resp.data)
+    } catch (err: any) {
+      console.error('Failed to delete machine:', err)
+      alert(err.response?.data?.message || 'Failed to delete machine')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <div className="mx-auto">
@@ -154,6 +182,7 @@ export default function MachinesPage() {
                         <td className="px-6 py-4 text-right">
                           <div className="inline-flex items-center gap-3">
                             <button onClick={() => openDetail(m)} className="text-blue-600 hover:text-blue-700 text-sm font-medium">View</button>
+                            <button onClick={() => openDeleteModal(m)} className="text-red-600 hover:text-red-700 text-sm font-medium">Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -242,6 +271,46 @@ export default function MachinesPage() {
               <div>
                 <h4 className="text-sm text-slate-500">Warranty (months)</h4>
                 <div className="font-medium text-slate-800">{selectedMachine.warrantyTimeInMonths ?? '—'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && machineToDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-white">Delete Machine</h3>
+                <button onClick={() => setShowDeleteModal(false)} className="text-white">
+                  ✕
+                </button>
+              </div>
+              <p className="text-red-100 text-sm mt-1">This action cannot be undone</p>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-700 mb-4">
+                Are you sure you want to delete <span className="font-semibold">{machineToDelete.name}</span>?
+              </p>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleteLoading}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleteLoading}
+                  className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all"
+                >
+                  {deleteLoading ? 'Deleting...' : 'Delete Machine'}
+                </button>
               </div>
             </div>
           </div>

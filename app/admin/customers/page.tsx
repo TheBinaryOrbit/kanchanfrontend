@@ -26,6 +26,9 @@ export default function CustomersPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [form, setForm] = useState({ name: '', phone: '', email: '', street: '', city: '', state: '', pincode: '' })
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const [search, setSearch] = useState(initialSearch)
   const [searchInput, setSearchInput] = useState(initialSearch)
@@ -83,17 +86,26 @@ export default function CustomersPage() {
     }
   }
 
-  async function handleDelete(customer: Customer) {
-    const ok = window.confirm(`Delete customer "${customer.name}"?\nThis will remove all related records.`)
-    if (!ok) return
+  function openDeleteModal(customer: Customer) {
+    setCustomerToDelete(customer)
+    setShowDeleteModal(true)
+  }
+
+  async function handleDelete() {
+    if (!customerToDelete) return
 
     try {
-      await api.delete(`/api/customers/${customer.id}`)
+      setDeleting(true)
+      await api.delete(`/api/customers/${customerToDelete.id}`)
       setSelectedCustomer(null)
+      setShowDeleteModal(false)
+      setCustomerToDelete(null)
       await load()
     } catch (err) {
       console.error(err)
       alert('Failed to delete customer')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -205,7 +217,7 @@ export default function CustomersPage() {
                           </button>
 
                           <button 
-                            onClick={() => handleDelete(c)}
+                            onClick={() => openDeleteModal(c)}
                             className="text-red-600 hover:text-red-700 font-medium"
                           >
                             Delete
@@ -427,7 +439,7 @@ export default function CustomersPage() {
 
             <div className="px-6 pb-6 flex gap-3">
               <button 
-                onClick={() => handleDelete(selectedCustomer!)}
+                onClick={() => openDeleteModal(selectedCustomer!)}
                 className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
               >
                 Delete Customer
@@ -439,6 +451,59 @@ export default function CustomersPage() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && customerToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-white">Delete Customer</h3>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-red-100 text-sm mt-1">This action cannot be undone</p>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-700 mb-6">
+                Are you sure you want to delete <span className="font-semibold">{customerToDelete.name}</span>? This will permanently remove the customer and all related records.
+              </p>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Customer'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
