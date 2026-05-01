@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import api from '@/lib/api'
+import { Pencil } from 'lucide-react'
 
 export default function ServiceDetails() {
   const params = useParams()
@@ -51,6 +52,9 @@ export default function ServiceDetails() {
   // Status update state
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [showPendingAmountModal, setShowPendingAmountModal] = useState(false)
+  const [pendingAmountValue, setPendingAmountValue] = useState('')
+  const [updatingPendingAmount, setUpdatingPendingAmount] = useState(false)
 
   async function loadEngineers() {
     try {
@@ -251,6 +255,36 @@ export default function ServiceDetails() {
     }
   }
 
+  function openPendingAmountModal() {
+    setPendingAmountValue(String(record?.pendingAmount ?? 0))
+    setShowPendingAmountModal(true)
+  }
+
+  async function updatePendingAmount() {
+    const amount = Number(pendingAmountValue)
+    if (Number.isNaN(amount) || amount < 0) {
+      alert('Please enter a valid pending amount')
+      return
+    }
+
+    setUpdatingPendingAmount(true)
+    try {
+      await api.put(`/api/service-records/${id}`, {
+        pendingAmount: amount
+      })
+
+      const res = await api.get(`/api/service-records/${id}`)
+      setRecord(res.data.serviceRecord || res.data)
+      setShowPendingAmountModal(false)
+      alert('Pending amount updated successfully')
+    } catch (err: any) {
+      console.error('Failed to update pending amount:', err)
+      alert(err.response?.data?.message || 'Failed to update pending amount')
+    } finally {
+      setUpdatingPendingAmount(false)
+    }
+  }
+
   function fmtDate(d: string | undefined) {
     if (!d) return '—'
     try {
@@ -421,7 +455,17 @@ export default function ServiceDetails() {
               }`}>{record.warrantyDaysRemaining} days</span>
             </div>
             <div>
-              <span className="text-slate-500 block mb-1">Pending Amount</span>
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <span className="text-slate-500 block">Pending Amount</span>
+                <button
+                  type="button"
+                  onClick={openPendingAmountModal}
+                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </button>
+              </div>
               <span className="font-semibold text-lg text-slate-800">₹{(record.pendingAmount || 0).toLocaleString()}</span>
             </div>
             <div className="pt-3 border-t border-slate-200">
@@ -466,6 +510,54 @@ export default function ServiceDetails() {
                 <span className="text-lg font-semibold text-slate-800">{record.kpis.customerSatisfaction}/5 ⭐</span>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Amount Modal */}
+      {showPendingAmountModal && (
+        <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="bg-linear-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-2xl">
+              <h3 className="text-xl font-semibold text-white">Update Pending Amount</h3>
+              <p className="text-blue-100 text-sm mt-1">Change the outstanding amount for this service record</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="pendingAmount" className="block text-sm font-semibold text-slate-700 mb-2">
+                  Pending Amount (₹)
+                </label>
+                <input
+                  id="pendingAmount"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={pendingAmountValue}
+                  onChange={(e) => setPendingAmountValue(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Enter pending amount"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPendingAmountModal(false)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                  disabled={updatingPendingAmount}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={updatePendingAmount}
+                  disabled={updatingPendingAmount}
+                  className="px-4 py-2 bg-linear-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updatingPendingAmount ? 'Updating...' : 'Update Amount'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -521,7 +613,7 @@ export default function ServiceDetails() {
                     </div>
                   )}
                 </div>
-                <div className="ml-4 space-y-2 flex-shrink-0">
+                <div className="ml-4 space-y-2 shrink-0">
                   {report.manualUrl && (
                     <a href={`https://2q766kvz-3000.inc1.devtunnels.ms${report.manualUrl}`} target="_blank" rel="noopener noreferrer" 
                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
@@ -613,7 +705,7 @@ export default function ServiceDetails() {
                 </div>
                 <button 
                   onClick={() => openPointModal(point)}
-                  className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex-shrink-0"
+                  className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shrink-0"
                 >
                   Manage
                 </button>

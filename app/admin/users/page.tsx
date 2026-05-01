@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react'
 import api from '@/lib/api'
-import { Delete, Trash } from 'lucide-react'
+import { Activity, Eye, Trash } from 'lucide-react'
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([])
@@ -18,6 +18,12 @@ export default function UsersPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [userToDelete, setUserToDelete] = useState<any | null>(null)
+  const [showActivityModal, setShowActivityModal] = useState(false)
+  const [activityUser, setActivityUser] = useState<any | null>(null)
+  const [activityType, setActivityType] = useState<'SYSTEM' | 'USER'>('USER')
+  const [activityLogs, setActivityLogs] = useState<any[]>([])
+  const [activityPagination, setActivityPagination] = useState<{ page: number; limit: number; total: number; pages: number } | null>(null)
+  const [loadingActivity, setLoadingActivity] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -33,6 +39,25 @@ export default function UsersPage() {
     }
     load()
   }, [])
+
+  useEffect(() => {
+    async function loadActivity() {
+      if (!showActivityModal || !activityUser) return
+      setLoadingActivity(true)
+      try {
+        // call API with userId and actionType
+        const res = await api.get('/api/activity-logs', { params: { userId: activityUser.id, actionType: activityType } })
+        setActivityLogs(res.data?.activityLogs || [])
+        setActivityPagination(res.data?.pagination || null)
+      } catch (err) {
+        console.error('Failed to load activity logs:', err)
+        alert('Failed to load activity logs')
+      } finally {
+        setLoadingActivity(false)
+      }
+    }
+    loadActivity()
+  }, [showActivityModal, activityUser, activityType])
 
   function openCreateModal() {
     setCreateForm({ 
@@ -94,18 +119,18 @@ export default function UsersPage() {
       <div className="mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-linear-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
               Employee Management
             </h1>
           </div>
           <button 
             onClick={openCreateModal}
-            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+            className="px-4 py-2 bg-linear-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -144,7 +169,7 @@ export default function UsersPage() {
                         <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                              <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
                                 {u.name?.charAt(0)?.toUpperCase() || 'U'}
                               </div>
                               <div>
@@ -165,6 +190,14 @@ export default function UsersPage() {
                             <div className="inline-flex items-center gap-3">
                               {/* <button onClick={() => alert(JSON.stringify(u, null, 2))} className="text-blue-600 hover:text-blue-700 font-medium">View</button> */}
                               {/* <a className="text-sm text-blue-600 hover:underline" href="/admin/users/change-password">Change Password</a> */}
+                              <button
+                                onClick={() => { setActivityUser(u); setShowActivityModal(true); setActivityType('USER') }}
+                                className="text-blue-600 hover:text-blue-700"
+                                aria-label="View activity logs"
+                                title="View activity logs"
+                              >
+                                <Eye className="w-4 h-4 cursor-pointer" />
+                              </button>
                               <button
                                 onClick={() => openDeleteModal(u)}
                                 disabled={deletingId === u.id}
@@ -212,13 +245,77 @@ export default function UsersPage() {
           </div>
         </div> */}
       </div>
+      {/* Activity Modal */}
+      {showActivityModal && activityUser && (
+        <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 flex items-center justify-between border-b">
+              <div>
+                <h3 className="text-lg font-semibold">Activity - {activityUser.name}</h3>
+                <p className="text-sm text-slate-500">Filter by action type</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={activityType}
+                  onChange={e => setActivityType(e.target.value as 'SYSTEM' | 'USER')}
+                  className="px-3 py-2 border rounded-lg"
+                >
+                  <option value="USER">USER</option>
+                  <option value="SYSTEM">SYSTEM</option>
+                </select>
+                <button
+                  onClick={() => { setShowActivityModal(false); setActivityUser(null); setActivityLogs([]); setActivityPagination(null) }}
+                  className="text-slate-600 hover:text-slate-800"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {loadingActivity ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="inline-block w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {activityLogs.length === 0 ? (
+                    <div className="text-center text-slate-500 py-12">No activity logs found</div>
+                  ) : (
+                    activityLogs.map((a: any, idx: number) => (
+                      <div key={idx} className="border rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-slate-800">{a.action}</div>
+                          <div className="text-xs text-slate-500">{new Date(a.createdAt || a.time || a.timestamp).toLocaleString()}</div>
+                        </div>
+                        <div className="text-sm text-slate-600 mt-2">{a.description}</div>
+                        <div className="mt-3 text-xs text-slate-500 flex flex-wrap gap-2">
+                          <span className="px-2 py-1 rounded-full bg-slate-100">{a.actionType}</span>
+                          {a.user ? <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-700">{a.user.name}</span> : null}
+                          {a.user?.uid ? <span className="px-2 py-1 rounded-full bg-slate-100">UID: {a.user.uid}</span> : null}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+              {activityPagination && (
+                <div className="mt-6 pt-4 border-t text-sm text-slate-500 flex items-center justify-between">
+                  <span>Page {activityPagination.page} of {activityPagination.pages}</span>
+                  <span>Total {activityPagination.total} records</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create User Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-2xl">
+            <div className="bg-linear-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-white flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,7 +433,7 @@ export default function UsersPage() {
                 <button
                   type="submit"
                   disabled={createLoading || !createForm.name || !createForm.email || !createForm.phone || !createForm.password}
-                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+                  className="px-6 py-2 bg-linear-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
                 >
                   {createLoading ? (
                     <>
@@ -365,7 +462,7 @@ export default function UsersPage() {
       {showDeleteModal && userToDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 rounded-t-2xl">
+            <div className="bg-linear-to-r from-red-600 to-red-700 px-6 py-4 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-white">Delete User</h3>
                 <button
@@ -396,7 +493,7 @@ export default function UsersPage() {
                   type="button"
                   onClick={deleteUser}
                   disabled={deletingId === userToDelete.id}
-                  className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 bg-linear-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {deletingId === userToDelete.id ? (
                     <span className="flex items-center gap-2">
